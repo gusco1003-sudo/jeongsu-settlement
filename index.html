@@ -169,6 +169,25 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   .delbtn:hover{ opacity:1; text-decoration:underline; }
   .empty{ text-align:center; padding:34px 10px; color:var(--ink-soft); font-size:13px; }
 
+  /* Pickup count stepper (in ledger) */
+  .pkbox{ display:inline-flex; align-items:center; gap:5px; justify-content:flex-end; }
+  .pkbtn{
+    width:24px; height:24px; padding:0; border-radius:7px; border:1px solid var(--line-strong);
+    background:var(--card); color:var(--ink); cursor:pointer; font-size:14px; line-height:1;
+    display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace;
+  }
+  .pkbtn:hover{ background:var(--paper-dim); border-color:var(--amber); }
+  .pkbtn:disabled{ opacity:.28; cursor:default; border-color:var(--line); background:var(--card); }
+  .pkcnt{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px; min-width:34px; text-align:center; }
+  .pkcnt.zero{ color:var(--brick); }
+  .pkamt{ margin-top:4px; }
+  .pkamt.zero{ color:var(--ink-soft); }
+  .addpk{
+    font-size:12px; padding:8px 12px; border-radius:8px; border:1px solid var(--line-strong);
+    background:var(--card); color:var(--ink); cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .addpk:hover{ background:var(--paper-dim); border-color:var(--amber); }
+
   /* Receipt summary */
   .receipt{
     background:var(--ink); color:var(--paper); border-radius:14px; padding:0; overflow:hidden;
@@ -193,8 +212,142 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   .vatnote{ padding:12px 24px 20px; font-size:11px; color:#9C9384; line-height:1.6; }
 
   @media (max-width:640px){
-    thead th:nth-child(4), td:nth-child(4){ display:none; } /* hide 픽업비 col on mobile, folded into subtotal */
+    #ledger thead th:nth-child(4), #ledger tbody td:nth-child(4){ display:none; } /* hide 건별비용 col on mobile, folded into subtotal */
     .monthlabel{ font-size:17px; }
+  }
+
+  /* ---------- Receipt action buttons ---------- */
+  .receipt-actions{ display:flex; gap:8px; flex-wrap:wrap; padding:0 24px 22px; }
+  .receipt-actions button{
+    font-size:12.5px; font-weight:700; padding:9px 14px; border-radius:9px; cursor:pointer;
+    border:1px solid rgba(250,248,243,0.22); background:rgba(250,248,243,0.08); color:var(--paper);
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .receipt-actions button:hover{ background:rgba(250,248,243,0.18); }
+  .receipt-actions button.primary{ background:var(--amber); color:#241802; border-color:var(--amber); }
+  .receipt-actions button.primary:hover{ background:var(--amber-deep); color:var(--paper); }
+
+  /* ---------- Statement (내역서) overlay ---------- */
+  #stmtOverlay{ position:fixed; inset:0; z-index:60; background:rgba(30,36,32,0.6); display:none; }
+  #stmtOverlay.open{ display:flex; flex-direction:column; }
+  .stmt-toolbar{
+    flex:none; background:var(--ink); color:var(--paper); padding:12px clamp(12px,3vw,22px);
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-bottom:3px solid var(--amber);
+  }
+  .stmt-toolbar .ttl{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; margin-right:auto; }
+  .stmt-toolbar button{
+    font-size:12.5px; font-weight:700; padding:8px 13px; border-radius:8px; cursor:pointer;
+    border:1px solid rgba(250,248,243,0.25); background:rgba(250,248,243,0.08); color:var(--paper);
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .stmt-toolbar button:hover{ background:rgba(250,248,243,0.18); }
+  .stmt-toolbar button.primary{ background:var(--amber); color:#241802; border-color:var(--amber); }
+  .stmt-toolbar label{ font-size:12px; color:#C9C2AF; display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .stmt-scroll{ flex:1; overflow:auto; padding:20px clamp(6px,3vw,26px) 70px; -webkit-overflow-scrolling:touch; }
+
+  .stmt-paper{
+    width:210mm; max-width:100%; margin:0 auto; background:#fff; color:#111;
+    padding:14mm 12mm; box-shadow:0 24px 60px -22px rgba(0,0,0,.55);
+    font-family:'Noto Sans KR', sans-serif; font-size:11.5px; line-height:1.45;
+  }
+  .stmt-paper .s-head{ text-align:center; margin-bottom:12px; }
+  .stmt-paper .s-title{ font-size:25px; font-weight:900; letter-spacing:.34em; margin:0 0 4px; padding-left:.34em; }
+  .stmt-paper .s-sub{ font-size:11.5px; color:#444; letter-spacing:.02em; }
+  .stmt-paper .s-rule{ height:3px; background:#111; margin:9px 0 0; }
+  .stmt-paper .s-rule.thin{ height:1px; background:#111; margin-top:2px; }
+
+  .stmt-paper table{ width:100%; border-collapse:collapse; margin:0; font-size:11px; table-layout:fixed; }
+  .stmt-paper th, .stmt-paper td{
+    border:1px solid #8d8d8d; padding:5px 7px; vertical-align:middle;
+    text-transform:none; letter-spacing:0; color:#111; font-family:'Noto Sans KR',sans-serif;
+    font-weight:400; text-align:left; word-break:break-all;
+  }
+  .stmt-paper thead th{
+    background:#EDEAE2; font-weight:700; text-align:center; font-size:10.5px;
+    border-bottom:1px solid #8d8d8d; padding:6px 7px;
+  }
+  .stmt-paper tbody tr:hover{ background:transparent; }
+  .stmt-paper .lb{ background:#F3F1EA; font-weight:700; width:74px; text-align:center; font-size:10.5px; }
+  .stmt-paper .r{ text-align:right; font-family:'JetBrains Mono',monospace; }
+  .stmt-paper .c{ text-align:center; }
+  .stmt-paper .b{ font-weight:700; }
+
+  .stmt-paper .s-parties{ display:flex; gap:8px; margin-top:12px; }
+  .stmt-paper .s-parties > div{ flex:1; min-width:0; }
+  .stmt-paper .s-partytag{
+    font-size:10.5px; font-weight:700; background:#111; color:#fff; display:inline-block;
+    padding:2px 9px; margin-bottom:3px; letter-spacing:.06em;
+  }
+  .stmt-paper .s-sec{ margin-top:14px; }
+  .stmt-paper .s-sec h4{
+    margin:0 0 5px; font-size:12px; font-weight:700; letter-spacing:.02em;
+    border-left:4px solid #111; padding-left:7px;
+  }
+  .stmt-paper .s-grand{ margin-top:12px; border:2px solid #111; display:flex; align-items:stretch; }
+  .stmt-paper .s-grand .k{
+    background:#111; color:#fff; font-weight:700; font-size:12px; padding:9px 14px;
+    display:flex; align-items:center; letter-spacing:.1em; white-space:nowrap;
+  }
+  .stmt-paper .s-grand .v{ flex:1; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .stmt-paper .s-grand .han{ font-size:13px; font-weight:700; }
+  .stmt-paper .s-grand .fig{ font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:700; }
+  .stmt-paper tfoot td, .stmt-paper tr.sum td{ background:#F3F1EA; font-weight:700; }
+  .stmt-paper .s-foot{ margin-top:14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .stmt-paper .s-note{ flex:1; min-width:210px; font-size:10.5px; color:#333; line-height:1.7; }
+  .stmt-paper .s-note b{ color:#111; }
+  .stmt-paper .s-stamp{ text-align:right; font-size:11px; line-height:1.9; }
+  .stmt-paper .s-stamp .co{ font-size:13.5px; font-weight:700; }
+  .stmt-paper .s-stamp .seal{
+    display:inline-block; width:46px; height:46px; border:1px dashed #999; border-radius:50%;
+    color:#999; font-size:9px; line-height:46px; text-align:center; margin-left:8px; vertical-align:middle;
+  }
+  .stmt-paper .s-empty{ padding:30px 10px; text-align:center; color:#666; border:1px dashed #aaa; }
+
+  /* ---------- Issuer settings modal ---------- */
+  #issuerModal{ position:fixed; inset:0; z-index:70; background:rgba(30,36,32,0.6); display:none;
+    align-items:flex-start; justify-content:center; overflow:auto; padding:24px 14px 60px; }
+  #issuerModal.open{ display:flex; }
+  #issuerModal .box{ background:var(--card); border-radius:14px; width:min(680px,100%); padding:24px; box-shadow:var(--shadow); }
+  #issuerModal h3{ margin:0 0 4px; font-size:16px; }
+  #issuerModal .hint{ margin:0 0 16px; font-size:12.5px; color:var(--ink-soft); }
+  #issuerModal .grp{ margin-bottom:16px; }
+  #issuerModal .grp > .gt{ font-size:12px; font-weight:700; color:var(--teal-deep); margin-bottom:8px; letter-spacing:.04em; }
+  #issuerModal .fields{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+  #issuerModal .f{ display:flex; flex-direction:column; gap:3px; }
+  #issuerModal .f.wide{ grid-column:1 / -1; }
+  #issuerModal label{ font-size:11px; color:var(--ink-soft); }
+  #issuerModal input, #issuerModal textarea{
+    padding:9px 11px; border-radius:8px; border:1px solid var(--line-strong); background:var(--paper);
+    font-size:13px; color:var(--ink); font-family:'Noto Sans KR',sans-serif; outline:none; width:100%;
+  }
+  #issuerModal input:focus, #issuerModal textarea:focus{ border-color:var(--amber); }
+  #issuerModal .acts{ display:flex; gap:8px; justify-content:flex-end; margin-top:6px; }
+  #issuerModal .acts button{
+    font-size:13px; font-weight:700; padding:10px 18px; border-radius:9px; cursor:pointer;
+    border:1px solid var(--line-strong); background:var(--card); color:var(--ink); font-family:'Noto Sans KR',sans-serif;
+  }
+  #issuerModal .acts button.primary{ background:var(--amber); border-color:var(--amber); color:#241802; }
+  @media (max-width:560px){ #issuerModal .fields{ grid-template-columns:1fr; } }
+
+  /* ---------- Print ---------- */
+  @media print{
+    @page{ size:A4 portrait; margin:11mm; }
+    html,body{ background:#fff !important; }
+    body.stmt-open #gate,
+    body.stmt-open #app > header,
+    body.stmt-open #app > main,
+    body.stmt-open #issuerModal,
+    body.stmt-open .stmt-toolbar{ display:none !important; }
+    body.stmt-open #stmtOverlay{ position:static !important; display:block !important; background:#fff !important; inset:auto; }
+    body.stmt-open .stmt-scroll{ overflow:visible !important; padding:0 !important; }
+    body.stmt-open .stmt-paper{
+      width:100% !important; max-width:none !important; margin:0 !important; padding:0 !important;
+      box-shadow:none !important; font-size:10.5px;
+    }
+    .stmt-paper tr{ page-break-inside:avoid; }
+    .stmt-paper thead{ display:table-header-group; }
+    .stmt-paper .s-sec{ page-break-inside:auto; }
+    .stmt-paper .s-grand, .stmt-paper .s-foot{ page-break-inside:avoid; }
   }
 </style>
 </head>
@@ -231,7 +384,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   <main>
     <section class="card">
       <h2>피킹리스트 업로드</h2>
-      <p class="sub">택배가 발생한 날짜의 피킹리스트 엑셀을 올리면 건수를 자동으로 세어 정산에 반영합니다. 같은 날짜에 여러 번 업로드해도 픽업비는 하루 1건만 청구됩니다.</p>
+      <p class="sub">택배가 발생한 날짜의 피킹리스트 엑셀을 올리면 건수를 자동으로 세어 정산에 반영합니다. 같은 날짜에 여러 번 업로드하면 픽업비는 기본 1회로 잡히며, 아래 표에서 날짜별 픽업 횟수를 직접 늘리거나 줄일 수 있습니다.</p>
       <div id="drop">
         <div class="ic">📦</div>
         <div class="t1">엑셀 파일을 끌어다 놓거나 클릭해서 선택</div>
@@ -257,12 +410,16 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
           <select id="jumpMonth"></select>
         </div>
       </div>
-      <table>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+        <button class="addpk" id="addPickupBtn" type="button">＋ 픽업일 직접 추가</button>
+        <span style="font-size:11.5px; color:var(--ink-soft);">피킹리스트 없이 픽업만 발생한 날짜를 추가합니다. 픽업 횟수는 표의 −/＋ 버튼으로 조정하세요.</span>
+      </div>
+      <table id="ledger">
         <thead>
           <tr>
             <th>날짜</th>
             <th class="num">택배 건수</th>
-            <th class="num">픽업비</th>
+            <th class="num">픽업 횟수 · 픽업비<br><span style="font-weight:400;text-transform:none;">(30,000원×횟수)</span></th>
             <th class="num">건별비용<br><span style="font-weight:400;text-transform:none;">(2,400원×건수)</span></th>
             <th class="num">일 소계</th>
             <th></th>
@@ -281,6 +438,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
       <div class="receipt-rows">
         <div class="rrow"><span>택배 발생일수</span><span class="v" id="sDays">0일</span></div>
         <div class="rrow"><span>총 택배 건수</span><span class="v" id="sCount">0건</span></div>
+        <div class="rrow"><span>픽업 횟수</span><span class="v" id="sPickupN">0회</span></div>
         <div class="rrow"><span>픽업비 합계</span><span class="v" id="sPickup">₩0</span></div>
         <div class="rrow"><span>건별비용 합계</span><span class="v" id="sItem">₩0</span></div>
         <div class="rrow"><span>공급가액 (소계)</span><span class="v" id="sSub">₩0</span></div>
@@ -289,8 +447,70 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
       </div>
       <div class="perf"></div>
       <div class="vatnote">모든 금액은 부가가치세(10%) 별도이며, 위 합계금액은 부가세를 포함한 세금계산서 청구 기준 금액입니다.</div>
+      <div class="receipt-actions">
+        <button id="openStmt" class="primary" type="button">🧾 정산 내역서 발행</button>
+        <button id="quickXlsx" type="button">📊 엑셀(.xlsx) 내려받기</button>
+        <button id="openIssuer" type="button">⚙ 발행정보 설정</button>
+      </div>
     </section>
   </main>
+</div>
+
+<div id="stmtOverlay">
+  <div class="stmt-toolbar">
+    <div class="ttl">정산 내역서 (거래명세서)</div>
+    <label><input type="checkbox" id="stmtDetail" checked> 일자별 상세 포함</label>
+    <label><input type="checkbox" id="stmtFiles"> 피킹리스트 파일 표기</label>
+    <button id="stmtPrint" class="primary" type="button">🖨 인쇄 / PDF 저장</button>
+    <button id="stmtXlsx" type="button">📊 엑셀 내려받기</button>
+    <button id="stmtIssuer" type="button">⚙ 발행정보</button>
+    <button id="stmtClose" type="button">✕ 닫기</button>
+  </div>
+  <div class="stmt-scroll">
+    <div class="stmt-paper" id="stmtPaper"></div>
+  </div>
+</div>
+
+<div id="issuerModal">
+  <div class="box">
+    <h3>내역서 발행정보</h3>
+    <p class="hint">내역서 상단에 인쇄될 사업자 정보입니다. 한 번 저장하면 서버에 보관되어 다른 PC에서도 그대로 사용됩니다. 비워두면 해당 칸은 빈칸으로 인쇄됩니다.</p>
+
+    <div class="grp">
+      <div class="gt">공급자 (당사)</div>
+      <div class="fields">
+        <div class="f"><label>상호</label><input id="i_supName" type="text" placeholder="주식회사 태성 (TS3PL)"></div>
+        <div class="f"><label>사업자등록번호</label><input id="i_supBiz" type="text" placeholder="000-00-00000"></div>
+        <div class="f"><label>대표자</label><input id="i_supCeo" type="text"></div>
+        <div class="f"><label>연락처</label><input id="i_supTel" type="text" placeholder="055-000-0000"></div>
+        <div class="f wide"><label>주소</label><input id="i_supAddr" type="text"></div>
+        <div class="f wide"><label>입금계좌</label><input id="i_supBank" type="text" placeholder="○○은행 000-000000-00-000 (주)태성"></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="gt">공급받는자 (화주)</div>
+      <div class="fields">
+        <div class="f"><label>상호</label><input id="i_cliName" type="text" placeholder="정수공작"></div>
+        <div class="f"><label>사업자등록번호</label><input id="i_cliBiz" type="text" placeholder="000-00-00000"></div>
+        <div class="f"><label>대표자</label><input id="i_cliCeo" type="text"></div>
+        <div class="f"><label>연락처</label><input id="i_cliTel" type="text"></div>
+        <div class="f wide"><label>주소</label><input id="i_cliAddr" type="text"></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="gt">비고 (내역서 하단 문구)</div>
+      <div class="fields">
+        <div class="f wide"><textarea id="i_note" rows="2" placeholder="예) 결제조건: 익월 10일 이내 입금 / 세금계산서 별도 발행"></textarea></div>
+      </div>
+    </div>
+
+    <div class="acts">
+      <button id="issuerCancel" type="button">취소</button>
+      <button id="issuerSave" class="primary" type="button">저장</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -300,7 +520,11 @@ const PICKUP_FEE = 30000;
 const PER_ITEM_FEE = 2400;
 const ADMIN_PW = "4656";
 
-let records = {}; // { 'YYYY-MM-DD': { files: { key: count } } }
+const MAX_PICKUP = 20; // 하루 픽업 횟수 상한
+
+// { 'YYYY-MM-DD': { files: { key: count }, pickup: 픽업횟수 } }
+// pickup 값이 없는 기존 데이터는 1회로 간주합니다.
+let records = {};
 let curYear, curMonth; // curMonth 1-12
 
 /* ---------------- Global error visibility ----------------
@@ -369,6 +593,10 @@ function mergeInto(target, source){
     Object.keys(srcFiles).forEach(f=>{
       if(!(f in target[date].files)) target[date].files[f] = srcFiles[f];
     });
+    // 픽업 횟수는 기존 값이 없을 때만 채웁니다 (수정한 값을 덮어쓰지 않도록).
+    if(target[date].pickup === undefined && source[date] && source[date].pickup !== undefined){
+      target[date].pickup = source[date].pickup;
+    }
   });
 }
 function setSyncStatus(ok){
@@ -400,6 +628,10 @@ async function boot(){
   render();
   setupUpload();
   setupBackup();
+  setupStatement();
+  loadIssuerLocal();
+  loadIssuerRemote();
+  document.getElementById('addPickupBtn').addEventListener('click', addPickupDay);
   document.getElementById('prevM').addEventListener('click', ()=>{ shiftMonth(-1); });
   document.getElementById('nextM').addEventListener('click', ()=>{ shiftMonth(1); });
   document.getElementById('jumpMonth').addEventListener('change', e=>{
@@ -461,39 +693,34 @@ function render(){
   const sel = document.getElementById('jumpMonth');
   sel.innerHTML = monthsWithData.map(m=>`<option value="${m}" ${m===mKey?'selected':''}>${m}</option>`).join('') || `<option value="${mKey}">${mKey}</option>`;
 
-  const dates = validKeys.filter(d=>d.startsWith(mKey)).sort();
+  const agg = computeMonth(curYear, curMonth);
   const tbody = document.getElementById('tbody');
   const emptyMsg = document.getElementById('emptyMsg');
   tbody.innerHTML = '';
 
-  let totalDays=0, totalCount=0, totalPickup=0, totalItem=0;
-
-  if(dates.length===0){
+  if(agg.days.length===0){
     emptyMsg.style.display='block';
   } else {
     emptyMsg.style.display='none';
-    dates.forEach(d=>{
-      const files = records[d].files || {};
-      const count = Object.values(files).reduce((a,b)=>a+b,0);
-      if(count<=0) return;
-      const pickup = PICKUP_FEE;
-      const item = count*PER_ITEM_FEE;
-      const subtotal = pickup+item;
-      totalDays++; totalCount+=count; totalPickup+=pickup; totalItem+=item;
-
-      const dt = new Date(d+'T00:00:00');
-      const fileNames = Object.keys(files);
-
+    agg.days.forEach(x=>{
+      const fileNames = Object.keys(x.files);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="date">${d}<span class="wd">${WD[dt.getDay()]}요일</span></td>
-        <td class="num">${count.toLocaleString('ko-KR')}건
-          <div class="filetags">${fileNames.map(f=>`<span>${f.replace(/_xlsx$/,'.xlsx').replace(/^정수공작_피킹리스트_|^피킹리스트_/,'')} · ${files[f]}건</span>`).join('')}</div>
+        <td class="date">${x.date}<span class="wd">${x.wd}요일</span></td>
+        <td class="num">${x.count.toLocaleString('ko-KR')}건
+          <div class="filetags">${fileNames.map(f=>`<span>${prettyFileName(f)} · ${x.files[f]}건</span>`).join('')}</div>
         </td>
-        <td class="num"><span class="pill on">발생</span><br>${fmtWon(pickup)}</td>
-        <td class="num">${fmtWon(item)}</td>
-        <td class="num" style="font-weight:700;">${fmtWon(subtotal)}</td>
-        <td><button class="delbtn" data-date="${d}">삭제</button></td>
+        <td class="num">
+          <div class="pkbox">
+            <button class="pkbtn" type="button" data-pk="-1" data-date="${x.date}" ${x.units<=0?'disabled':''} title="픽업 횟수 줄이기">−</button>
+            <span class="pkcnt${x.units===0?' zero':''}">${x.units}회</span>
+            <button class="pkbtn" type="button" data-pk="1" data-date="${x.date}" ${x.units>=MAX_PICKUP?'disabled':''} title="픽업 횟수 늘리기">＋</button>
+          </div>
+          <div class="pkamt${x.units===0?' zero':''}">${fmtWon(x.pickup)}</div>
+        </td>
+        <td class="num">${fmtWon(x.item)}</td>
+        <td class="num" style="font-weight:700;">${fmtWon(x.subtotal)}</td>
+        <td><button class="delbtn" data-date="${x.date}">삭제</button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -502,18 +729,90 @@ function render(){
   tbody.querySelectorAll('.delbtn').forEach(btn=>{
     btn.addEventListener('click', ()=>deleteDay(btn.dataset.date));
   });
+  tbody.querySelectorAll('.pkbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=> bumpPickup(btn.dataset.date, parseInt(btn.dataset.pk,10)));
+  });
 
-  const subtotal = totalPickup + totalItem;
-  const vat = Math.round(subtotal*0.1);
-  const grand = subtotal + vat;
+  document.getElementById('sDays').textContent = `${agg.totalDays}일`;
+  document.getElementById('sCount').textContent = `${agg.totalCount.toLocaleString('ko-KR')}건`;
+  document.getElementById('sPickupN').textContent = `${agg.totalPickupUnits}회`;
+  document.getElementById('sPickup').textContent = fmtWon(agg.totalPickup);
+  document.getElementById('sItem').textContent = fmtWon(agg.totalItem);
+  document.getElementById('sSub').textContent = fmtWon(agg.subtotal);
+  document.getElementById('sVat').textContent = fmtWon(agg.vat);
+  document.getElementById('sTotal').textContent = fmtWon(agg.grand);
 
-  document.getElementById('sDays').textContent = `${totalDays}일`;
-  document.getElementById('sCount').textContent = `${totalCount.toLocaleString('ko-KR')}건`;
-  document.getElementById('sPickup').textContent = fmtWon(totalPickup);
-  document.getElementById('sItem').textContent = fmtWon(totalItem);
-  document.getElementById('sSub').textContent = fmtWon(subtotal);
-  document.getElementById('sVat').textContent = fmtWon(vat);
-  document.getElementById('sTotal').textContent = fmtWon(grand);
+  // 내역서가 열려 있으면 같이 갱신
+  const ov = document.getElementById('stmtOverlay');
+  if(ov && ov.classList.contains('open')) renderStatement();
+}
+
+/* ---------------- 픽업 횟수 수정 ----------------
+   pickup 값이 없는 날짜는 1회로 간주합니다(기존 데이터 호환).
+   0회로 내리면 픽업비가 빠지고, 피킹리스트도 없는 날짜라면 기록 자체를 삭제합니다. */
+function getPickupUnits(date){
+  const r = records[date];
+  if(!r) return 0;
+  const v = Number(r.pickup);
+  if(r.pickup === undefined || r.pickup === null || !Number.isFinite(v)) return 1;
+  return Math.max(0, Math.min(MAX_PICKUP, Math.floor(v)));
+}
+
+function fileCountOf(date){
+  const r = records[date];
+  return r && r.files ? Object.keys(r.files).length : 0;
+}
+
+async function setPickupUnits(date, units){
+  units = Math.max(0, Math.min(MAX_PICKUP, Math.floor(Number(units)||0)));
+  if(!records[date]) records[date] = {files:{}};
+  const dropRecord = (units === 0 && fileCountOf(date) === 0);
+
+  // 1) 화면과 로컬에 먼저 반영 — 서버 저장 실패가 수정 자체를 되돌리지 않도록.
+  if(dropRecord) delete records[date];
+  else records[date].pickup = units;
+  saveLocalBackup();
+  render();
+
+  // 2) 서버 반영
+  try{
+    const res = dropRecord
+      ? await fetch(`${FIREBASE_BASE}/${NODE}/records/${date}.json`, { method:'DELETE' })
+      : await fetch(`${FIREBASE_BASE}/${NODE}/records/${date}/pickup.json`, {
+          method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(units)
+        });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    setSyncStatus(true);
+    logRow('ok', '픽업비', dropRecord ? `${date} · 픽업 0회 — 기록 삭제됨` : `${date} · 픽업 ${units}회 (서버 저장됨)`);
+  }catch(err){
+    console.error('픽업 횟수 저장 실패', err);
+    setSyncStatus(false);
+    logRow('warn', '픽업비', `${date} · 픽업 ${units}회 (이 브라우저에만 저장됨 — 서버 실패: ${err.message||'네트워크 오류'})`);
+  }
+}
+
+function bumpPickup(date, delta){
+  setPickupUnits(date, getPickupUnits(date) + delta);
+}
+
+/* 피킹리스트 없이 픽업만 발생한 날짜를 직접 추가 */
+function addPickupDay(){
+  const guess = `${curYear}-${pad2(curMonth)}-`;
+  const input = prompt('픽업이 발생한 날짜를 입력하세요 (YYYY-MM-DD)', guess);
+  if(input === null) return;
+  const date = input.trim();
+  if(!isValidDateKey(date)){ alert('날짜 형식이 올바르지 않습니다. 예) 2026-09-04'); return; }
+  if(Number.isNaN(new Date(date+'T00:00:00').getTime())){ alert('존재하지 않는 날짜입니다.'); return; }
+
+  if(records[date] && getPickupUnits(date) > 0){
+    if(!confirm(`${date} 은 이미 등록되어 있습니다 (현재 픽업 ${getPickupUnits(date)}회).\n픽업 횟수를 1회 더 늘릴까요?`)) return;
+    bumpPickup(date, 1);
+  } else {
+    setPickupUnits(date, 1);
+  }
+  // 다른 달을 입력했다면 그 달로 이동
+  const y = parseInt(date.slice(0,4),10), m = parseInt(date.slice(5,7),10);
+  if(y !== curYear || m !== curMonth){ curYear = y; curMonth = m; render(); }
 }
 
 async function deleteDay(date){
@@ -697,6 +996,407 @@ function processFile(file){
     reader.readAsArrayBuffer(file);
   });
 }
+
+/* ================================================================
+   정산 내역서 (거래명세서) — 화면 인쇄 / PDF 저장 / 엑셀 내려받기
+   ================================================================ */
+
+const ISSUER_LOCAL = 'jeongsu_issuer_v1';
+const DEFAULT_ISSUER = {
+  supName:'주식회사 태성 (TS3PL)', supBiz:'', supCeo:'', supAddr:'', supTel:'', supBank:'',
+  cliName:'정수공작', cliBiz:'', cliCeo:'', cliAddr:'', cliTel:'', note:''
+};
+let issuer = Object.assign({}, DEFAULT_ISSUER);
+
+function esc(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* 로컬 날짜 기준 (toISOString 의 UTC 오프셋 문제를 피합니다) */
+function todayLocal(){
+  const t = new Date();
+  return `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`;
+}
+function lastDayOf(y, m){ return new Date(y, m, 0).getDate(); }
+
+/* 금액 한글 표기: 1234560 -> 일백이십삼만사천오백육십 */
+function hangulAmount(num){
+  num = Math.floor(Math.abs(Number(num)||0));
+  if(num === 0) return '영';
+  const D = ['','일','이','삼','사','오','육','칠','팔','구'];
+  const U = ['','십','백','천'];
+  const B = ['','만','억','조','경'];
+  const str = String(num);
+  const groups = [];
+  for(let i=str.length; i>0; i-=4) groups.push(str.slice(Math.max(0,i-4), i));
+  let out = '';
+  for(let g=groups.length-1; g>=0; g--){
+    const part = groups[g];
+    let ps = '';
+    for(let i=0; i<part.length; i++){
+      const d = +part[i];
+      if(d === 0) continue;
+      ps += D[d] + U[part.length-1-i];
+    }
+    if(ps) out += ps + B[g];
+  }
+  return out;
+}
+
+/* ---------------- 월별 집계 (화면/내역서 공통 계산) ---------------- */
+function computeMonth(y, m){
+  const mKey = `${y}-${pad2(m)}`;
+  const dates = Object.keys(records).filter(isValidDateKey).filter(d=>d.startsWith(mKey)).sort();
+  const days = [];
+  dates.forEach(d=>{
+    const files = (records[d] && records[d].files) || {};
+    const count = Object.values(files).reduce((a,b)=>a + (Number(b)||0), 0);
+    const units = getPickupUnits(d);
+    if(count <= 0 && units <= 0) return;   // 건수도 픽업도 없으면 표시하지 않음
+    const pickup = units * PICKUP_FEE;
+    const item = count * PER_ITEM_FEE;
+    days.push({
+      date: d,
+      wd: WD[new Date(d+'T00:00:00').getDay()],
+      files, count, units, pickup, item, subtotal: pickup + item
+    });
+  });
+  const totalCount  = days.reduce((a,b)=>a+b.count, 0);
+  const totalPickup = days.reduce((a,b)=>a+b.pickup, 0);
+  const totalPickupUnits = days.reduce((a,b)=>a+b.units, 0);
+  const totalItem   = days.reduce((a,b)=>a+b.item, 0);
+  const subtotal    = totalPickup + totalItem;
+  const vat         = Math.round(subtotal * 0.1);
+  return {
+    y, m, mKey,
+    from: `${mKey}-01`,
+    to:   `${mKey}-${pad2(lastDayOf(y,m))}`,
+    days, totalDays: days.length,
+    totalCount, totalPickup, totalPickupUnits, totalItem,
+    subtotal, vat, grand: subtotal + vat
+  };
+}
+
+function prettyFileName(f){
+  return f.replace(/_xlsx$/,'.xlsx').replace(/^정수공작_피킹리스트_|^피킹리스트_/,'');
+}
+
+/* ---------------- 발행정보 ---------------- */
+function loadIssuerLocal(){
+  try{
+    const raw = localStorage.getItem(ISSUER_LOCAL);
+    if(raw) issuer = Object.assign({}, DEFAULT_ISSUER, JSON.parse(raw));
+  }catch(_){}
+}
+async function loadIssuerRemote(){
+  try{
+    const res = await fetch(`${FIREBASE_BASE}/${NODE}/issuer.json`);
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && typeof data === 'object'){
+      issuer = Object.assign({}, DEFAULT_ISSUER, issuer, data);
+      try{ localStorage.setItem(ISSUER_LOCAL, JSON.stringify(issuer)); }catch(_){}
+    }
+  }catch(err){ console.warn('발행정보 불러오기 실패', err); }
+}
+const ISSUER_FIELDS = ['supName','supBiz','supCeo','supAddr','supTel','supBank','cliName','cliBiz','cliCeo','cliAddr','cliTel','note'];
+function fillIssuerForm(){
+  ISSUER_FIELDS.forEach(k=>{
+    const el = document.getElementById('i_'+k);
+    if(el) el.value = issuer[k] || '';
+  });
+}
+async function saveIssuer(){
+  const next = {};
+  ISSUER_FIELDS.forEach(k=>{
+    const el = document.getElementById('i_'+k);
+    next[k] = el ? el.value.trim() : (issuer[k]||'');
+  });
+  issuer = Object.assign({}, DEFAULT_ISSUER, next);
+  try{ localStorage.setItem(ISSUER_LOCAL, JSON.stringify(issuer)); }catch(_){}
+  document.getElementById('issuerModal').classList.remove('open');
+  if(document.getElementById('stmtOverlay').classList.contains('open')) renderStatement();
+  try{
+    const res = await fetch(`${FIREBASE_BASE}/${NODE}/issuer.json`, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(issuer)
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    logRow('ok', '발행정보', '저장 완료 (서버 반영)');
+  }catch(err){
+    console.error(err);
+    logRow('warn', '발행정보', '이 브라우저에만 저장됨 — 서버 실패: ' + (err.message||'네트워크 오류'));
+  }
+}
+
+/* ---------------- 내역서 HTML 생성 ---------------- */
+function partyBlock(tag, name, biz, ceo, addr, tel){
+  return `
+    <div>
+      <span class="s-partytag">${tag}</span>
+      <table>
+        <colgroup><col style="width:74px"><col></colgroup>
+        <tbody>
+          <tr><td class="lb">상 호</td><td class="b">${esc(name)}</td></tr>
+          <tr><td class="lb">등록번호</td><td>${esc(biz)}</td></tr>
+          <tr><td class="lb">대표자</td><td>${esc(ceo)}</td></tr>
+          <tr><td class="lb">주 소</td><td>${esc(addr)}</td></tr>
+          <tr><td class="lb">연락처</td><td>${esc(tel)}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function buildStatementHTML(){
+  const d = computeMonth(curYear, curMonth);
+  const showDetail = document.getElementById('stmtDetail').checked;
+  const showFiles  = document.getElementById('stmtFiles').checked;
+
+  const head = `
+    <div class="s-head">
+      <div class="s-title">정 산 내 역 서</div>
+      <div class="s-sub">${d.y}년 ${d.m}월분 · 정산기간 ${d.from} ~ ${d.to} · 발행일 ${todayLocal()}</div>
+      <div class="s-rule"></div><div class="s-rule thin"></div>
+    </div>`;
+
+  const parties = `
+    <div class="s-parties">
+      ${partyBlock('공급받는자 (화주)', issuer.cliName, issuer.cliBiz, issuer.cliCeo, issuer.cliAddr, issuer.cliTel)}
+      ${partyBlock('공 급 자', issuer.supName, issuer.supBiz, issuer.supCeo, issuer.supAddr, issuer.supTel)}
+    </div>`;
+
+  const grand = `
+    <div class="s-grand">
+      <div class="k">합계금액</div>
+      <div class="v">
+        <span class="han">일금 ${hangulAmount(d.grand)}원정</span>
+        <span class="fig">${fmtWon(d.grand)}</span>
+      </div>
+    </div>`;
+
+  const itemRows = d.totalDays === 0 ? '' : `
+    <tr>
+      <td>택배 픽업비</td><td class="c">픽업 1회당</td>
+      <td class="r">${d.totalPickupUnits.toLocaleString('ko-KR')} 회</td>
+      <td class="r">${PICKUP_FEE.toLocaleString('ko-KR')}</td>
+      <td class="r b">${d.totalPickup.toLocaleString('ko-KR')}</td>
+    </tr>
+    <tr>
+      <td>택배 건별 처리비</td><td class="c">건당</td>
+      <td class="r">${d.totalCount.toLocaleString('ko-KR')} 건</td>
+      <td class="r">${PER_ITEM_FEE.toLocaleString('ko-KR')}</td>
+      <td class="r b">${d.totalItem.toLocaleString('ko-KR')}</td>
+    </tr>`;
+
+  const itemTable = `
+    <div class="s-sec">
+      <h4>품목별 집계</h4>
+      <table>
+        <colgroup><col style="width:30%"><col style="width:18%"><col style="width:15%"><col style="width:15%"><col></colgroup>
+        <thead><tr><th>품 목</th><th>규 격</th><th>수 량</th><th>단 가</th><th>공급가액</th></tr></thead>
+        <tbody>${itemRows || `<tr><td colspan="5" class="c">해당 월 정산 내역이 없습니다.</td></tr>`}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" class="c">공 급 가 액 합 계</td>
+            <td class="r">${d.subtotal.toLocaleString('ko-KR')}</td>
+          </tr>
+          <tr>
+            <td colspan="4" class="c">부 가 세 (10%)</td>
+            <td class="r">${d.vat.toLocaleString('ko-KR')}</td>
+          </tr>
+          <tr>
+            <td colspan="4" class="c">합 계 금 액 (VAT 포함)</td>
+            <td class="r">${d.grand.toLocaleString('ko-KR')}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+
+  let detailTable = '';
+  if(showDetail){
+    const rows = d.days.map(x=>`
+      <tr>
+        <td class="c">${x.date}</td>
+        <td class="c">${x.wd}</td>
+        <td class="r">${x.count.toLocaleString('ko-KR')}</td>
+        <td class="r">${x.pickup.toLocaleString('ko-KR')}<span style="font-size:9px;color:#555;"> (${x.units}회)</span></td>
+        <td class="r">${x.item.toLocaleString('ko-KR')}</td>
+        <td class="r b">${x.subtotal.toLocaleString('ko-KR')}</td>
+        ${showFiles ? `<td style="font-size:9.5px;color:#444;">${Object.keys(x.files).map(f=>esc(prettyFileName(f))+' · '+x.files[f]+'건').join('<br>')}</td>` : ''}
+      </tr>`).join('');
+
+    detailTable = `
+      <div class="s-sec">
+        <h4>일자별 상세내역</h4>
+        <table>
+          <colgroup>
+            <col style="width:${showFiles?'12%':'15%'}"><col style="width:7%">
+            <col style="width:${showFiles?'11%':'14%'}"><col style="width:${showFiles?'14%':'18%'}">
+            <col style="width:${showFiles?'15%':'20%'}"><col style="width:${showFiles?'16%':'26%'}">
+            ${showFiles?'<col>':''}
+          </colgroup>
+          <thead>
+            <tr>
+              <th>일 자</th><th>요일</th><th>택배 건수</th>
+              <th>픽업비<br>(${PICKUP_FEE.toLocaleString('ko-KR')}원×횟수)</th><th>건별비용<br>(${PER_ITEM_FEE.toLocaleString('ko-KR')}원×건수)</th><th>일 소계</th>
+              ${showFiles ? '<th>피킹리스트</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>${rows || `<tr><td colspan="${showFiles?7:6}" class="c">해당 월 정산 내역이 없습니다.</td></tr>`}</tbody>
+          <tfoot>
+            <tr class="sum">
+              <td colspan="2" class="c">합 계 (${d.totalDays}일)</td>
+              <td class="r">${d.totalCount.toLocaleString('ko-KR')}</td>
+              <td class="r">${d.totalPickup.toLocaleString('ko-KR')}<span style="font-size:9px;color:#555;"> (${d.totalPickupUnits}회)</span></td>
+              <td class="r">${d.totalItem.toLocaleString('ko-KR')}</td>
+              <td class="r">${d.subtotal.toLocaleString('ko-KR')}</td>
+              ${showFiles ? '<td></td>' : ''}
+            </tr>
+          </tfoot>
+        </table>
+      </div>`;
+  }
+
+  const noteLines = [];
+  noteLines.push('상기와 같이 정산 내역을 통보합니다.');
+  noteLines.push('모든 금액은 <b>부가가치세(10%) 별도</b> 기준이며, 합계금액은 부가세를 포함한 세금계산서 청구 기준 금액입니다.');
+  noteLines.push('픽업비는 택배 발생일 기준 <b>1일 1회</b>가 기본이며, 실제 픽업이 여러 번 발생하거나 없었던 날은 <b>픽업 횟수</b>에 맞춰 조정하여 청구합니다.');
+  if(issuer.supBank) noteLines.push(`입금계좌: <b>${esc(issuer.supBank)}</b>`);
+  if(issuer.note) noteLines.push(esc(issuer.note));
+
+  const foot = `
+    <div class="s-foot">
+      <div class="s-note">${noteLines.map(t=>'· '+t).join('<br>')}</div>
+      <div class="s-stamp">
+        <div>${todayLocal()}</div>
+        <div class="co">${esc(issuer.supName)}<span class="seal">(인)</span></div>
+      </div>
+    </div>`;
+
+  return head + parties + grand + itemTable + detailTable + foot;
+}
+
+function renderStatement(){
+  document.getElementById('stmtPaper').innerHTML = buildStatementHTML();
+}
+function openStatement(){
+  renderStatement();
+  document.getElementById('stmtOverlay').classList.add('open');
+  document.body.classList.add('stmt-open');
+  document.getElementById('stmtOverlay').querySelector('.stmt-scroll').scrollTop = 0;
+}
+function closeStatement(){
+  document.getElementById('stmtOverlay').classList.remove('open');
+  document.body.classList.remove('stmt-open');
+}
+
+/* ---------------- 엑셀(.xlsx) 내려받기 ---------------- */
+function exportStatementXlsx(){
+  if(typeof XLSX === 'undefined'){ alert('엑셀 라이브러리를 불러오지 못했습니다.'); return; }
+  const d = computeMonth(curYear, curMonth);
+  if(d.totalDays === 0){ alert('이 달에는 정산할 내역이 없습니다.'); return; }
+
+  const aoa = [];
+  aoa.push(['정 산 내 역 서 (거래명세서)']);
+  aoa.push([`${d.y}년 ${d.m}월분`, '', '', '', `발행일  ${todayLocal()}`]);
+  aoa.push(['정산기간', `${d.from} ~ ${d.to}`]);
+  aoa.push([]);
+  aoa.push(['[ 공급자 ]', '', '', '[ 공급받는자 ]', '']);
+  aoa.push(['상호', issuer.supName, '', '상호', issuer.cliName]);
+  aoa.push(['사업자등록번호', issuer.supBiz, '', '사업자등록번호', issuer.cliBiz]);
+  aoa.push(['대표자', issuer.supCeo, '', '대표자', issuer.cliCeo]);
+  aoa.push(['주소', issuer.supAddr, '', '주소', issuer.cliAddr]);
+  aoa.push(['연락처', issuer.supTel, '', '연락처', issuer.cliTel]);
+  aoa.push([]);
+  aoa.push(['[ 품목별 집계 ]']);
+  aoa.push(['품목', '규격', '수량', '단가', '공급가액']);
+  aoa.push(['택배 픽업비', '픽업 1회당', d.totalPickupUnits, PICKUP_FEE, d.totalPickup]);
+  aoa.push(['택배 건별 처리비', '건당', d.totalCount, PER_ITEM_FEE, d.totalItem]);
+  aoa.push([]);
+  aoa.push(['[ 일자별 상세내역 ]']);
+  aoa.push(['일자', '요일', '택배 건수', '픽업 횟수', '픽업비', '건별비용', '일 소계']);
+  d.days.forEach(x=> aoa.push([x.date, x.wd, x.count, x.units, x.pickup, x.item, x.subtotal]));
+  aoa.push([`합계 (${d.totalDays}일)`, '', d.totalCount, d.totalPickupUnits, d.totalPickup, d.totalItem, d.subtotal]);
+  aoa.push([]);
+  aoa.push(['공급가액', '', '', '', '', '', d.subtotal]);
+  aoa.push(['부가세 (10%)', '', '', '', '', '', d.vat]);
+  aoa.push(['합계금액 (VAT 포함)', '', '', '', '', '', d.grand]);
+  aoa.push([`일금 ${hangulAmount(d.grand)}원정`]);
+  if(issuer.supBank) aoa.push(['입금계좌', issuer.supBank]);
+  if(issuer.note) aoa.push(['비고', issuer.note]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:20},{wch:18},{wch:13},{wch:12},{wch:14},{wch:16},{wch:16}];
+  Object.keys(ws).forEach(addr=>{
+    if(addr[0] === '!') return;
+    const cell = ws[addr];
+    if(cell && cell.t === 'n') cell.z = '#,##0';
+  });
+
+  // 두 번째 시트: 업로드된 피킹리스트 파일 단위 원본 내역
+  const fa = [['일자','요일','피킹리스트 파일','건수']];
+  d.days.forEach(x=>{
+    const names = Object.keys(x.files);
+    if(names.length === 0){ fa.push([x.date, x.wd, '', x.count]); return; }
+    names.forEach(f=> fa.push([x.date, x.wd, prettyFileName(f), Number(x.files[f])||0]));
+  });
+  fa.push(['합계','','', d.totalCount]);
+  const ws2 = XLSX.utils.aoa_to_sheet(fa);
+  ws2['!cols'] = [{wch:13},{wch:7},{wch:44},{wch:10}];
+  Object.keys(ws2).forEach(addr=>{
+    if(addr[0] === '!') return;
+    if(ws2[addr] && ws2[addr].t === 'n') ws2[addr].z = '#,##0';
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws,  '정산내역서');
+  XLSX.utils.book_append_sheet(wb, ws2, '피킹리스트 원본');
+
+  const fname = `정수공작_정산내역서_${d.y}${pad2(d.m)}.xlsx`;
+  try{
+    XLSX.writeFile(wb, fname);
+    logRow('ok', '내역서', `${fname} 내려받기 완료`);
+  }catch(err){
+    console.error(err);
+    alert('엑셀 파일 생성에 실패했습니다: ' + (err.message||''));
+  }
+}
+
+/* ---------------- 이벤트 연결 ---------------- */
+function setupStatement(){
+  document.getElementById('openStmt').addEventListener('click', openStatement);
+  document.getElementById('quickXlsx').addEventListener('click', exportStatementXlsx);
+  document.getElementById('openIssuer').addEventListener('click', ()=>{
+    fillIssuerForm();
+    document.getElementById('issuerModal').classList.add('open');
+  });
+
+  document.getElementById('stmtClose').addEventListener('click', closeStatement);
+  document.getElementById('stmtPrint').addEventListener('click', ()=> window.print());
+  document.getElementById('stmtXlsx').addEventListener('click', exportStatementXlsx);
+  document.getElementById('stmtIssuer').addEventListener('click', ()=>{
+    fillIssuerForm();
+    document.getElementById('issuerModal').classList.add('open');
+  });
+  document.getElementById('stmtDetail').addEventListener('change', renderStatement);
+  document.getElementById('stmtFiles').addEventListener('change', renderStatement);
+
+  document.getElementById('issuerSave').addEventListener('click', saveIssuer);
+  document.getElementById('issuerCancel').addEventListener('click', ()=>{
+    document.getElementById('issuerModal').classList.remove('open');
+  });
+  document.getElementById('issuerModal').addEventListener('click', (e)=>{
+    if(e.target.id === 'issuerModal') document.getElementById('issuerModal').classList.remove('open');
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Escape') return;
+    const im = document.getElementById('issuerModal');
+    if(im.classList.contains('open')){ im.classList.remove('open'); return; }
+    if(document.getElementById('stmtOverlay').classList.contains('open')) closeStatement();
+  });
+}
+
 </script>
 </body>
 </html>
